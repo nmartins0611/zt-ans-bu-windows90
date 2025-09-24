@@ -347,6 +347,13 @@ cat <<'EOF' | tee /tmp/windows-bootstrap.yml
       args:
         executable: powershell.exe
 
+    - name: Execute slmgr /rearm with elevated privileges
+      ansible.windows.win_powershell:
+        script: slmgr /rearm
+      become: yes
+      become_method: runas
+      register: rearm_result
+
     - name: Reboot after Chocolatey/.NET installation
       ansible.windows.win_reboot:
         msg: "Reboot to finalize Chocolatey/.NET installation"
@@ -363,30 +370,6 @@ cat <<'EOF' | tee /tmp/windows-bootstrap.yml
 EOF
 
 
-# license setup playbook
-cat <<EOF | tee /tmp/win-rearm.yml
----
-- name: Reset Windows activation grace period
-  hosts: windows
-  tasks:
-    - name: Execute slmgr /rearm with elevated privileges
-      ansible.windows.win_powershell:
-        script: slmgr /rearm
-      become: yes
-      become_method: runas
-      register: rearm_result
-
-    - name: Display the result of the rearm command
-      debug:
-        var: rearm_result.stdout_lines
-
-    - name: Reboot system after rearm
-      ansible.windows.win_reboot:
-        reboot_timeout: 600
-        pre_reboot_delay: 10
-
-EOF
-
 # Execute the setup playbooks
 echo "=== Running Git/Gitea Setup ==="
 ansible-playbook /tmp/git-setup.yml -e @/tmp/track-vars.yml -i /tmp/inventory.ini -v
@@ -396,9 +379,6 @@ ansible-playbook /tmp/windows-bootstrap.yml -e @/tmp/track-vars.yml -i /tmp/inve
 
 echo "=== Running AAP Controller Setup ==="
 ansible-playbook /tmp/controller-setup.yml -e @/tmp/track-vars.yml -i /tmp/inventory.ini -v
-
-echo "=== Running Windows License rearm ==="
-ansible-playbook /tmp/win-rearm.yml -e @/tmp/track-vars.yml -i /tmp/inventory.ini -v
 
 
 
