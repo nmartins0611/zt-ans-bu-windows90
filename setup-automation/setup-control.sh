@@ -362,6 +362,28 @@ cat <<'EOF' | tee /tmp/windows-bootstrap.yml
       until: edge_install.rc == 0
 EOF
 
+
+# license setup playbook
+cat <<EOF | tee /tmp/win-rearm.yml
+---
+- name: Reset Windows activation grace period
+  hosts: windows
+  tasks:
+    - name: Run slmgr /rearm command
+      ansible.windows.win_shell: slmgr /rearm
+      register: rearm_result
+      
+    - name: Display command output
+      debug:
+        var: rearm_result.stdout
+        
+    - name: Reboot system after rearm
+      ansible.windows.win_reboot:
+        reboot_timeout: 600
+        pre_reboot_delay: 10
+
+EOF
+
 # Execute the setup playbooks
 echo "=== Running Git/Gitea Setup ==="
 ansible-playbook /tmp/git-setup.yml -e @/tmp/track-vars.yml -i /tmp/inventory.ini -v
@@ -371,3 +393,11 @@ ansible-playbook /tmp/windows-bootstrap.yml -e @/tmp/track-vars.yml -i /tmp/inve
 
 echo "=== Running AAP Controller Setup ==="
 ansible-playbook /tmp/controller-setup.yml -e @/tmp/track-vars.yml -i /tmp/inventory.ini -v
+
+echo "=== Running Windows License rearm ==="
+ansible-playbook /tmp/win-rearm.yml -e @/tmp/track-vars.yml -i /tmp/inventory.ini -v
+
+
+
+
+
