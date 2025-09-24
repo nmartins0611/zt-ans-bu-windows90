@@ -369,14 +369,17 @@ cat <<EOF | tee /tmp/win-rearm.yml
 - name: Reset Windows activation grace period
   hosts: windows
   tasks:
-    - name: Run slmgr /rearm command
-      ansible.windows.win_shell: slmgr /rearm
+    - name: Execute slmgr /rearm with elevated privileges
+      ansible.windows.win_powershell:
+        script: slmgr /rearm
+      become: yes
+      become_method: runas
       register: rearm_result
-      
-    - name: Display command output
+
+    - name: Display the result of the rearm command
       debug:
-        var: rearm_result.stdout
-        
+        var: rearm_result.stdout_lines
+
     - name: Reboot system after rearm
       ansible.windows.win_reboot:
         reboot_timeout: 600
